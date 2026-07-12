@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Star, Gift, Zap, Plus, Target } from 'lucide-react';
 import { PageHeader, GlassCard, StatCard, DataTable, StatusBadge, Badge, DifficultyBadge, ProgressBar } from '../components/ui/index.jsx';
 import { dummyChallenges, dummyBadges, dummyRewards, dummyLeaderboard } from '../data/dummy/index.js';
+import { useToast } from '../contexts/ToastContext.jsx';
 
 const SUB_TABS = [
     { path: 'dashboard', label: 'Dashboard' },
@@ -80,7 +81,16 @@ function GameDashboard() {
 
 function ChallengesPage() {
     const [filter, setFilter] = useState('all');
+    const toast = useToast();
+    const [joinedIds, setJoinedIds] = useState([]);
+
     const filtered = filter === 'all' ? dummyChallenges : dummyChallenges.filter(c => c.status === filter);
+
+    const handleJoin = (ch) => {
+        if (joinedIds.includes(ch._id)) return;
+        setJoinedIds(prev => [...prev, ch._id]);
+        toast.success(`You have successfully joined the "${ch.title}" challenge!`);
+    };
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -116,8 +126,15 @@ function ChallengesPage() {
                             </div>
                             <p className="text-xs text-[var(--text-muted)] mt-3">Deadline: {ch.deadline}</p>
                             {ch.status === 'active' && (
-                                <button className="mt-3 w-full py-2 rounded-lg bg-[var(--gamify)]/20 text-[var(--gamify)] text-sm font-medium border border-[var(--gamify)]/30 hover:bg-[var(--gamify)]/30 transition">
-                                    Join Challenge →
+                                <button
+                                    onClick={() => handleJoin(ch)}
+                                    disabled={joinedIds.includes(ch._id)}
+                                    className={`mt-3 w-full py-2 rounded-lg text-sm font-medium border transition cursor-pointer flex items-center justify-center gap-1.5 ${joinedIds.includes(ch._id)
+                                            ? 'bg-emerald-500/10 text-emerald-450 border-emerald-500/30'
+                                            : 'bg-[var(--gamify)]/20 text-[var(--gamify)] border-[var(--gamify)]/30 hover:bg-[var(--gamify)]/30'
+                                        }`}
+                                >
+                                    {joinedIds.includes(ch._id) ? '✓ Joined' : 'Join Challenge →'}
                                 </button>
                             )}
                         </GlassCard>
@@ -185,8 +202,8 @@ function RewardsPage() {
                             <button
                                 disabled={!canRedeem}
                                 className={`mt-3 w-full py-2 rounded-lg text-sm font-medium transition ${canRedeem
-                                        ? 'bg-[var(--gamify)]/20 text-[var(--gamify)] border border-[var(--gamify)]/30 hover:bg-[var(--gamify)]/30'
-                                        : 'bg-white/5 text-[var(--text-muted)] cursor-not-allowed'
+                                    ? 'bg-[var(--gamify)]/20 text-[var(--gamify)] border border-[var(--gamify)]/30 hover:bg-[var(--gamify)]/30'
+                                    : 'bg-white/5 text-[var(--text-muted)] cursor-not-allowed'
                                     }`}
                             >
                                 {r.stock === 0 ? 'Out of Stock' : canRedeem ? 'Redeem →' : 'Not Enough Points'}

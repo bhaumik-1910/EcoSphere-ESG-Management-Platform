@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Sparkles, FileText, ChevronRight, BrainCircuit, Leaf, Shield, UserRoundCheck } from 'lucide-react';
 import { StatCard, GlassCard, DataTable, StatusBadge } from '../ui/index.jsx';
 

@@ -6,6 +6,7 @@ import { PageHeader, GlassCard, StatCard } from '../components/ui/index.jsx';
 import { dummyDepartments } from '../data/dummy/index.js';
 import { useEsgConfig } from '../contexts/EsgConfigContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 const SUB_TABS = [
     { path: 'esg-configuration', label: 'ESG Config' },
@@ -27,25 +28,40 @@ const SubTabs = () => (
 );
 
 const Toggle = ({ label, description, value, onChange }) => (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-[var(--border-glass)]">
+    <div
+        onClick={() => onChange(!value)}
+        className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-[var(--border-glass)] cursor-pointer select-none"
+    >
         <div className="flex-1 min-w-0 mr-4">
             <p className="text-sm font-semibold text-white">{label}</p>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>
+            {description && <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>}
         </div>
-        <button
-            onClick={() => onChange(!value)}
+        <div
             className={`relative w-12 h-6 rounded-full border-2 transition-all duration-200 flex-shrink-0 ${value ? 'bg-[var(--accent-emerald)] border-[var(--accent-emerald)]' : 'bg-white/10 border-white/20'
                 }`}
         >
             <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${value ? 'left-6' : 'left-0.5'}`} />
-        </button>
+        </div>
     </div>
 );
 
 function EsgConfiguration() {
     const { config, setConfig } = useEsgConfig();
-    const setToggle = (key) => (val) => setConfig(c => ({ ...c, [key]: val }));
-    const setWeight = (key, val) => setConfig(c => ({ ...c, weights: { ...c.weights, [key]: Number(val) } }));
+    const toast = useToast();
+    const [draft, setDraft] = useState(config);
+
+    const setToggle = (key) => (val) => setDraft(c => ({ ...c, [key]: val }));
+    const setWeight = (key, val) => setDraft(c => ({ ...c, weights: { ...c.weights, [key]: Number(val) } }));
+
+    const handleSave = () => {
+        const total = Object.values(draft.weights).reduce((a, b) => a + b, 0);
+        if (total !== 100) {
+            toast.error(`Total ESG weights must equal exactly 100%. Current total is ${total}%`);
+            return;
+        }
+        setConfig(draft);
+        toast.success("ESG weights and business rules successfully saved!");
+    };
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-3xl">
@@ -61,7 +77,7 @@ function EsgConfiguration() {
                         <div key={key}>
                             <label className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-semibold block mb-1.5">{label}</label>
                             <input
-                                type="number" min="0" max="100" value={config.weights[key]}
+                                type="number" min="0" max="100" value={draft.weights[key]}
                                 onChange={e => setWeight(key, e.target.value)}
                                 className="w-full bg-white/5 border-2 rounded-xl px-4 py-3 text-2xl font-bold text-white focus:outline-none transition"
                                 style={{ borderColor: color + '60' }}
@@ -70,8 +86,8 @@ function EsgConfiguration() {
                     ))}
                 </div>
                 <p className="text-xs text-[var(--text-muted)] mt-3">
-                    Total: <span className={`font-bold ${Object.values(config.weights).reduce((a, b) => a + b, 0) === 100 ? 'text-[var(--env)]' : 'text-red-400'}`}>
-                        {Object.values(config.weights).reduce((a, b) => a + b, 0)}%
+                    Total: <span className={`font-bold ${Object.values(draft.weights).reduce((a, b) => a + b, 0) === 100 ? 'text-[var(--env)]' : 'text-red-400'}`}>
+                        {Object.values(draft.weights).reduce((a, b) => a + b, 0)}%
                     </span> (must equal 100%)
                 </p>
             </GlassCard>
@@ -82,25 +98,25 @@ function EsgConfiguration() {
                     <Toggle
                         label="Auto Emission Calculation"
                         description="Automatically calculate carbon emissions from Purchase, Manufacturing, Expense and Fleet records"
-                        value={config.autoEmissionCalculation}
+                        value={draft.autoEmissionCalculation}
                         onChange={setToggle('autoEmissionCalculation')}
                     />
                     <Toggle
                         label="Evidence Requirement (CSR)"
                         description="Block approval of CSR participation unless a proof file is attached"
-                        value={config.evidenceRequirement}
+                        value={draft.evidenceRequirement}
                         onChange={setToggle('evidenceRequirement')}
                     />
                     <Toggle
                         label="Badge Auto-Award"
                         description="Automatically award badges when an employee's XP or challenge count satisfies unlock rules"
-                        value={config.badgeAutoAward}
+                        value={draft.badgeAutoAward}
                         onChange={setToggle('badgeAutoAward')}
                     />
                 </div>
             </GlassCard>
 
-            <button className="flex items-center gap-2 px-6 py-3 text-sm bg-gradient-to-r from-[var(--accent-emerald)] to-emerald-700 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/20 hover:opacity-90 transition">
+            <button onClick={handleSave} className="flex items-center gap-2 px-6 py-3 text-sm bg-gradient-to-r from-[var(--accent-emerald)] to-emerald-700 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/20 hover:opacity-90 transition cursor-pointer">
                 <Save className="w-4 h-4" /> Save Configuration
             </button>
         </motion.div>
@@ -145,6 +161,7 @@ function DepartmentsPage() {
 
 function ProfilePage() {
     const { user } = useAuth();
+    const toast = useToast();
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl space-y-5">
             <GlassCard>
@@ -164,7 +181,7 @@ function ProfilePage() {
                         <input defaultValue={value} className="w-full bg-white/5 border border-[var(--border-glass)] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-emerald)]/50" />
                     </div>
                 ))}
-                <button className="flex items-center gap-2 px-5 py-2.5 text-sm bg-gradient-to-r from-[var(--accent-emerald)] to-emerald-700 text-white rounded-xl font-medium hover:opacity-90 transition">
+                <button onClick={() => toast.success("Profile updates saved successfully!")} className="flex items-center gap-2 px-5 py-2.5 text-sm bg-gradient-to-r from-[var(--accent-emerald)] to-emerald-700 text-white rounded-xl font-medium hover:opacity-90 transition cursor-pointer">
                     <Save className="w-4 h-4" /> Save Changes
                 </button>
             </GlassCard>
@@ -175,6 +192,19 @@ function ProfilePage() {
 function NotificationsPage() {
     const [email, setEmail] = useState(true);
     const [inApp, setInApp] = useState(true);
+    const toast = useToast();
+    const [triggers, setTriggers] = useState({
+        'New Compliance Issue Raised': true,
+        'CSR Approval Decision': true,
+        'Challenge Approval Decision': false,
+        'Policy Acknowledgement Reminder': true,
+        'Badge Unlocked': true,
+    });
+
+    const toggleTrigger = (key) => {
+        setTriggers(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl space-y-4">
             <GlassCard>
@@ -187,17 +217,14 @@ function NotificationsPage() {
             <GlassCard>
                 <h3 className="font-semibold text-white mb-4">Event Triggers</h3>
                 <div className="space-y-3">
-                    {[
-                        'New Compliance Issue Raised',
-                        'CSR Approval Decision',
-                        'Challenge Approval Decision',
-                        'Policy Acknowledgement Reminder',
-                        'Badge Unlocked',
-                    ].map(event => (
-                        <Toggle key={event} label={event} description="" value={true} onChange={() => { }} />
+                    {Object.entries(triggers).map(([key, val]) => (
+                        <Toggle key={key} label={key} description="" value={val} onChange={() => toggleTrigger(key)} />
                     ))}
                 </div>
             </GlassCard>
+            <button onClick={() => toast.success("Notification preferences saved successfully!")} className="flex items-center gap-2 px-5 py-2.5 text-sm bg-gradient-to-r from-[var(--accent-emerald)] to-emerald-700 text-white rounded-xl font-medium hover:opacity-90 transition cursor-pointer">
+                <Save className="w-4 h-4" /> Save Preferences
+            </button>
         </motion.div>
     );
 }
