@@ -35,6 +35,15 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({ success: true, message: 'Server is running normally' });
 });
 
+// Root Route
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Welcome to EcoSphere ESG Platform Backend API',
+        healthCheck: '/api/health'
+    });
+});
+
 // Error handling middleware
 app.use(errorHandler);
 
