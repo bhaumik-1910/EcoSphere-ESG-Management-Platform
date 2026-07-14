@@ -13,7 +13,25 @@ const app = express();
 // Security Middleware
 app.use(helmet());
 app.use(cors({
-    origin: [config.frontendUrl, 'http://localhost:5173', 'http://localhost:5174'],
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+        if (!origin) return callback(null, true);
+
+        const cleanOrigin = origin.replace(/\/$/, "");
+        const cleanConfigured = config.frontendUrl ? config.frontendUrl.replace(/\/$/, "") : "";
+
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://localhost:5175'
+        ];
+        if (cleanConfigured) {
+            allowedOrigins.push(cleanConfigured);
+        }
+
+        const isAllowed = allowedOrigins.includes(cleanOrigin) || cleanConfigured === '*';
+        callback(null, isAllowed);
+    },
     credentials: true,
 }));
 app.use(express.json());
